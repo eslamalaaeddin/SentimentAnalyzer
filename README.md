@@ -44,7 +44,7 @@ Building X and Y (Real Dataset)
 # Modeling
 	Logisitic Regression
 	SVM 
-  Naive Bayes
+  	Naive Bayes
 
 # Evaluation
 	Precision
