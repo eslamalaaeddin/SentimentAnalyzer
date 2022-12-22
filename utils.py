@@ -41,7 +41,8 @@ def process_tweet(tweet):
 
     return tweets_clean
 
-
+#(word, class): count
+#(word, class): count / len_vocab
 def build_freqs(tweets, ys):
     """Build frequencies.
     Input:
@@ -60,12 +61,41 @@ def build_freqs(tweets, ys):
     # Start with an empty dictionary and populate it by looping over all tweets
     # and over all processed words in each tweet.
     freqs = {}
+    vocab = set()
+    words_count = 0
     for y, tweet in zip(yslist, tweets):
         for word in process_tweet(tweet):
+            words_count += 1
+            vocab.add(word)
             pair = (word, y)
             if pair in freqs:
                 freqs[pair] += 1
             else:
                 freqs[pair] = 1
 
-    return freqs
+    return words_count, freqs, vocab
+
+
+def build_probs(freqs, vocab):
+    probs = {}
+    for pair, count in freqs.items():
+        probs[pair] = count / len(vocab)
+    return probs
+
+
+def get_word_class_count(freqs, word, label):
+    '''
+    Input:
+        freqs: a dictionary with the frequency of each pair (or tuple)
+        word: the word to look up
+        label: the label corresponding to the word
+    Output:
+        n: the number of times the word with its corresponding label appears.
+    '''
+    n = 0  # freqs.get((word, label), 0)
+
+    pair = (word, label)
+    if (pair in freqs):
+        n = freqs[pair]
+
+    return n

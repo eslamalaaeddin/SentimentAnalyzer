@@ -1,9 +1,13 @@
+import math
+
 import numpy as np
 import matplotlib.pyplot as plt
 from nltk.corpus import twitter_samples
 from sklearn.model_selection import train_test_split
+import pickle
 
-from utils import build_freqs, process_tweet
+from naive_bayes import train_naive_bayes, naive_bayes_predict
+from utils import build_freqs, process_tweet, get_word_class_count
 
 ############################################# Data Acquisition
 all_positive_tweets = twitter_samples.strings('positive_tweets.json')
@@ -31,13 +35,11 @@ print("train_y.shape = " + str(train_y.shape))
 print("test_y.shape = " + str(test_y.shape))
 
 # create frequency dictionary
-freqs = build_freqs(train_x, train_y)
-
+words_count, freqs, vocab = build_freqs(train_x, train_y)
 
 # check the output
 print("type(freqs) = " + str(type(freqs)))
 print("len(freqs) = " + str(len(freqs.keys())))
-
 
 ############################################# Text Cleaning and PreProcessing
 ## in utils.py -> process_tweet()
@@ -67,30 +69,43 @@ def extract_features(processed_tweet, freqs):
 
 
 # collect the features 'x' and stack them into a matrix 'X'
+print("Extracting Features Start")
 X = np.zeros((len(train_x), 3))
 for i, tweet in enumerate(train_x):
     processed_tweet = process_tweet(tweet)
     X[i, :] = extract_features(processed_tweet, freqs)
 Y = train_y
+print("Extracting Features End")
 
 ############################################# Modeling
 from sklearn.linear_model import LogisticRegression
-
-logisticClassifier = LogisticRegression(random_state=42).fit(X, np.ravel(Y))
-
 from sklearn.svm import SVC
-
-svc = SVC(random_state=42, probability=True).fit(X, np.ravel(Y))
-
 from sklearn.naive_bayes import GaussianNB
 
-naive_bayes = GaussianNB()
-naive_bayes.fit(X, np.ravel(Y))
+logistic_model_file = "logistic_model.sav"
+svc_model_file = "svc_model.sav"
+naive_bayes_model_file = "naive_bayes_model.sav"
+try:
+    print("Loading Models...")
+    logisticClassifier = pickle.load(open(logistic_model_file, 'rb'))
+    svc = pickle.load(open(svc_model_file, 'rb'))
+    naive_bayes = pickle.load(open(naive_bayes_model_file, 'rb'))
+
+except Exception:
+    print("Saving Models...")
+    logisticClassifier = LogisticRegression(random_state=42).fit(X, np.ravel(Y))
+    svc = SVC(random_state=42, probability=True).fit(X, np.ravel(Y))
+    naive_bayes = GaussianNB().fit(X, np.ravel(Y))
+    pickle.dump(svc, open(logistic_model_file, 'wb'))
+    pickle.dump(svc, open(svc_model_file, 'wb'))
+    pickle.dump(svc, open(naive_bayes_model_file, 'wb'))
 
 ############################################# Evaluation
-from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, confusion_matrix, \
+    ConfusionMatrixDisplay
 
 models = [logisticClassifier, svc, naive_bayes]
+# Not sure if this representation is OK with Naive Bayes, as text represented as frequencies not probabilities
 tweet_features = [extract_features(process_tweet(tweet), freqs) for tweet in test_x]
 print("-------- Evaluating --------")
 for model in models:
