@@ -6,7 +6,6 @@ from nltk.corpus import twitter_samples
 from sklearn.model_selection import train_test_split
 import pickle
 
-from naive_bayes import train_naive_bayes, naive_bayes_predict
 from utils import build_freqs, process_tweet, get_word_class_count
 
 ############################################# Data Acquisition
@@ -96,9 +95,9 @@ except Exception:
     logisticClassifier = LogisticRegression(random_state=42).fit(X, np.ravel(Y))
     svc = SVC(random_state=42, probability=True).fit(X, np.ravel(Y))
     naive_bayes = GaussianNB().fit(X, np.ravel(Y))
-    pickle.dump(svc, open(logistic_model_file, 'wb'))
+    pickle.dump(logisticClassifier, open(logistic_model_file, 'wb'))
     pickle.dump(svc, open(svc_model_file, 'wb'))
-    pickle.dump(svc, open(naive_bayes_model_file, 'wb'))
+    pickle.dump(naive_bayes, open(naive_bayes_model_file, 'wb'))
 
 ############################################# Evaluation
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, confusion_matrix, \
