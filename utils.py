@@ -1,20 +1,22 @@
+import itertools
 import re
 import string
 import numpy as np
+from matplotlib import pyplot as plt
 
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from nltk.tokenize import TweetTokenizer
 
-
-def process_tweet(tweet):
+def process_tweet(tweet, return_list=False):
     """Process tweet function.
     Input:
         tweet: a string containing a tweet
     Output:
-        tweets_clean: a list of words containing the processed tweet
+        tweets_clean: a list of words containing the processed tweet or String
 
     """
+
     stemmer = PorterStemmer()
     stopwords_english = stopwords.words('english')
     # remove stock market tickers like $GE
@@ -30,19 +32,37 @@ def process_tweet(tweet):
     tokenizer = TweetTokenizer(preserve_case=False, strip_handles=True,
                                reduce_len=True)
     tweet_tokens = tokenizer.tokenize(tweet)
-
-    tweets_clean = []
+    final_tweet_tokens = []
     for word in tweet_tokens:
         if (word not in stopwords_english and  # remove stopwords
                 word not in string.punctuation):  # remove punctuation
             # tweets_clean.append(word)
             stem_word = stemmer.stem(word)  # stemming word
-            tweets_clean.append(stem_word)
+            final_tweet_tokens.append(stem_word)
+    return " ".join(final_tweet_tokens) if return_list == False else final_tweet_tokens
 
-    return tweets_clean
+def convert_tweets_to_doc_vec(tweets, w2v_model):
+    np.seterr(divide='ignore', invalid='ignore')
 
-#(word, class): count
-#(word, class): count / len_vocab
+    docs = []
+    for tweet in tweets:
+        tokens = process_tweet(tweet, return_list=True)
+        tweet_vec = np.zeros(shape=(1, w2v_model.wv.vector_size))
+        tweet_words_counter = len(tokens)
+        for token in tokens:
+            try:
+                tweet_vec += w2v_model.wv[token]
+            except Exception: # if the token was not found
+                tweet_vec += np.zeros(shape=(1, w2v_model.wv.vector_size))
+        docs.append(tweet_vec / tweet_words_counter)
+    docs = np.array(docs)
+    shape1, shape2, shape3 = docs.shape
+    docs = docs.reshape((shape1, shape2 * shape3))
+    docs = np.nan_to_num(docs)
+    return docs
+
+# (word, class): count
+# (word, class): count / len_vocab
 def build_freqs(tweets, ys):
     """Build frequencies.
     Input:
@@ -99,3 +119,33 @@ def get_word_class_count(freqs, word, label):
         n = freqs[pair]
 
     return n
+
+def plot_confusion_matrix(cm, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label', fontsize=15)
+    plt.xlabel('Predicted label', fontsize=15)
+    plt.show()
